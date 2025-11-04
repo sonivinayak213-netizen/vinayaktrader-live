@@ -6,20 +6,27 @@ import cors from "cors";
 const app = express();
 app.use(cors());
 
-async function fetchNSEData(url) {
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
-      "Accept": "application/json",
-    },
-  });
-  return response.json();
-}
-
 app.get("/api/live", async (req, res) => {
   try {
-    const [nifty, banknifty, vix] = await Promise.all([
-      fetchNSEData("https://www.nseindia.com/api/quote-equity?symbol=NIFTY"),
-      fetchNSEData("https://www.nseindia.com/api/quote-equity?symbol=BANKNIFTY"),
-      fetchNSEData("https://www.nseindia.com/api/quote-indices?index=NIFTY%
+    const [niftyRes, bankniftyRes, vixRes] = await Promise.all([
+      fetch("https://www.nseindia.com/api/quote-equity?symbol=NIFTY"),
+      fetch("https://www.nseindia.com/api/quote-equity?symbol=BANKNIFTY"),
+      fetch("https://www.nseindia.com/api/quote-indices?index=NIFTY%20VIX"),
+    ]);
+
+    const nifty = await niftyRes.json();
+    const banknifty = await bankniftyRes.json();
+    const vix = await vixRes.json();
+
+    res.json({
+      nifty: nifty?.info || {},
+      banknifty: banknifty?.info || {},
+      vix: vix?.data?.[0] || {},
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch live data", details: err.message });
+  }
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`✅ Live server running on port ${PORT}`));
